@@ -14,22 +14,27 @@
     <script src="threex/threex-armarkercontrols.js"></script>
     <script src="threex/threex-arsmoothedcontrols.js"></script>
 </head>
-<body style="margin: 0; overflow: hidden;">
+<body style="margin: 0; overflow: hidden; font-family: Monospace">
     <script>
-        var scene, camera, renderer;
+        var scene, camera, renderer, clock, deltaTime, totalTime;
         var arToolkitSource, arToolkitContext;
-        var markerRoot1;
+        var markerRoot1, markerRoot2;
+		var mesh1;
 
         // Add Roboflow credentials
         var roboflowModel = 'anchored-reality/1';
         var roboflowApiKey = 'rf_cmx7eGjwNDbEUF9B8UITkBIGORH2';
 
         init();
-        render();
+        animte();
 
         function init() {
             // Initialize scene and camera
             scene = new THREE.Scene();
+
+			let ambientLight = new THREE.AmbientLight( 0xcccccc, 0.5 );
+			scene.add( ambientLight );
+
             camera = new THREE.Camera();
             scene.add(camera);
 
@@ -38,16 +43,20 @@
                 antialias: true,
                 alpha: true
             });
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(640,480);
             renderer.setClearColor(new THREE.Color('lightgrey'), 0);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.domElement.style.position = 'absolute';
+            renderer.domElement.style.top = '0px';
+            renderer.domElement.style.left = '0px';
             document.body.appendChild(renderer.domElement);
+
+			clock = new THREE.Clock()
+			deltaTime = 0;
+			totalTime = 0;
 
             // Initialize ARToolkitSource with Roboflow integration
             arToolkitSource = new THREEx.ArToolkitSource({
-                sourceType: 'roboflow',
-                roboflowModel: roboflowModel,
-                roboflowApiKey: roboflowApiKey,
+                sourceType: 'webcam',
             });
 
             arToolkitSource.init(function onReady() {
@@ -89,13 +98,15 @@
             markerRoot1.add(cube);
         }
 
-        function onResize() {
-            arToolkitSource.onResizeElement();
-            arToolkitSource.copyElementSizeTo(renderer.domElement);
-            if (arToolkitContext.arController !== null) {
-                arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas);
-            }
-        }
+		function onResize()
+		{
+			arToolkitSource.onResize()	
+			arToolkitSource.copySizeTo(renderer.domElement)	
+			if ( arToolkitContext.arController !== null )
+			{
+				arToolkitSource.copySizeTo(arToolkitContext.arController.canvas)	
+			}	
+		}
 
         function render() {
             requestAnimationFrame(render);
@@ -106,6 +117,15 @@
 
             renderer.render(scene, camera);
         }
+
+		function animate()
+		{
+			requestAnimationFrame(animate);
+			deltaTime = clock.getDelta();
+			totalTime += deltaTime;
+			update();
+			render();
+		}
     </script>
 </body>
 </html>
