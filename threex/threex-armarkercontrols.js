@@ -11,6 +11,8 @@ ARjs.MarkerControls = THREEx.ArMarkerControls = function(context, object3d, para
 	this.parameters = {
 		// size of the marker in meter
 		size : 1,
+		// type of marker - ['pattern', 'barcode', 'unknown' ]
+		type : 'unknown',
 		// url of the pattern - IIF type='pattern'
 		patternUrl : null,
 		// value of the barcode - IIF type='barcode'
@@ -19,14 +21,10 @@ ARjs.MarkerControls = THREEx.ArMarkerControls = function(context, object3d, para
 		changeMatrixMode : 'modelViewMatrix',
 		// minimal confidence in the marke recognition - between [0, 1] - default to 1
 		minConfidence: 0.6,
-
-		type: 'roboflow',  // Add Roboflow type
-		roboflowModel: null,  // For Roboflow model ID
-		roboflowApiKey: null,  // For Roboflow API key
 	}
 
 	// sanity check
-	var possibleValues = ['pattern', 'barcode', 'unknown', 'roboflow']
+	var possibleValues = ['pattern', 'barcode', 'unknown']
 	console.assert(possibleValues.indexOf(this.parameters.type) !== -1, 'illegal value', this.parameters.type)
 	var possibleValues = ['modelViewMatrix', 'cameraTransformMatrix' ]
 	console.assert(possibleValues.indexOf(this.parameters.changeMatrixMode) !== -1, 'illegal value', this.parameters.changeMatrixMode)
@@ -80,9 +78,8 @@ ARjs.MarkerControls = THREEx.ArMarkerControls = function(context, object3d, para
 	}else console.assert(false)
 }
 
-ARjs.MarkerControls.prototype = Object.create(THREEx.ArBaseControls.prototype);
-ARjs.MarkerControls.prototype.constructor = ARjs.MarkerControls;
-
+ARjs.MarkerControls.prototype = Object.create( THREEx.ArBaseControls.prototype );
+ARjs.MarkerControls.prototype.constructor = THREEx.ArMarkerControls;
 
 ARjs.MarkerControls.prototype.dispose = function(){
 	this.context.removeMarker(this)
@@ -99,43 +96,47 @@ ARjs.MarkerControls.prototype.dispose = function(){
  * When you actually got a new modelViewMatrix, you need to perfom a whole bunch
  * of things. it is done here.
  */
-ARjs.MarkerControls.prototype.updateWithModelViewMatrix = function(modelViewMatrix) {
-    var markerObject3D = this.object3d;
+ARjs.MarkerControls.prototype.updateWithModelViewMatrix = function(modelViewMatrix){
+	var markerObject3D = this.object3d;
 
-    // mark object as visible
-    markerObject3D.visible = true;
+	// mark object as visible
+	markerObject3D.visible = true
 
-    if (this.context.parameters.trackingBackend === 'artoolkit') {
-        // existing logic for artoolkit
-        var tmpMatrix = new THREE.Matrix4().copy(this.context._artoolkitProjectionAxisTransformMatrix);
-        tmpMatrix.multiply(modelViewMatrix);
-        modelViewMatrix.copy(tmpMatrix);
-    } else if (this.context.parameters.trackingBackend === 'roboflow') {
-        // directly use the modelViewMatrix obtained from Roboflow
-    }
+	if( this.context.parameters.trackingBackend === 'artoolkit' ){
+		// apply context._axisTransformMatrix - change artoolkit axis to match usual webgl one
+		var tmpMatrix = new THREE.Matrix4().copy(this.context._artoolkitProjectionAxisTransformMatrix)
+		tmpMatrix.multiply(modelViewMatrix)
 
-    if (this.context.parameters.trackingBackend !== 'tango') {
-        // apply the transformation to match the axis orientation
-        var markerAxisTransformMatrix = new THREE.Matrix4().makeRotationX(Math.PI / 2);
-        modelViewMatrix.multiply(markerAxisTransformMatrix);
-    }
+		modelViewMatrix.copy(tmpMatrix)
+	}else if( this.context.parameters.trackingBackend === 'aruco' ){
+		// ...
+	}else if( this.context.parameters.trackingBackend === 'tango' ){
+		// ...
+	}else console.assert(false)
 
-    // update the matrix based on changeMatrixMode
-    if (this.parameters.changeMatrixMode === 'modelViewMatrix') {
-        markerObject3D.matrix.copy(modelViewMatrix);
-    } else if (this.parameters.changeMatrixMode === 'cameraTransformMatrix') {
-        markerObject3D.matrix.getInverse(modelViewMatrix);
-    } else {
-        console.assert(false);
-    }
 
-    // decompose - the matrix into .position, .quaternion, .scale
-    markerObject3D.matrix.decompose(markerObject3D.position, markerObject3D.quaternion, markerObject3D.scale);
+	if( this.context.parameters.trackingBackend !== 'tango' ){
 
-    // dispatchEvent
-    this.dispatchEvent({ type: 'markerFound' });
-};
+		// change axis orientation on marker - artoolkit say Z is normal to the marker - ar.js say Y is normal to the marker
+		var markerAxisTransformMatrix = new THREE.Matrix4().makeRotationX(Math.PI/2)
+		modelViewMatrix.multiply(markerAxisTransformMatrix)
+	}
 
+	// change markerObject3D.matrix based on parameters.changeMatrixMode
+	if( this.parameters.changeMatrixMode === 'modelViewMatrix' ){
+		markerObject3D.matrix.copy(modelViewMatrix)
+	}else if( this.parameters.changeMatrixMode === 'cameraTransformMatrix' ){
+		markerObject3D.matrix.getInverse( modelViewMatrix )
+	}else {
+		console.assert(false)
+	}
+
+	// decompose - the matrix into .position, .quaternion, .scale
+	markerObject3D.matrix.decompose(markerObject3D.position, markerObject3D.quaternion, markerObject3D.scale)
+
+	// dispatchEvent
+	this.dispatchEvent( { type: 'markerFound' } );
+}
 
 //////////////////////////////////////////////////////////////////////////////
 //		utility functions
@@ -146,23 +147,20 @@ ARjs.MarkerControls.prototype.updateWithModelViewMatrix = function(modelViewMatr
  * - silly heuristic for now
  * - should be improved
  */
-ARjs.MarkerControls.prototype.name = function() {
-    var name = '';
-    name += this.parameters.type;
-    if (this.parameters.type === 'pattern') {
-        var url = this.parameters.patternUrl;
-        var basename = url.replace(/^.*\//g, '');
-        name += ' - ' + basename;
-    } else if (this.parameters.type === 'barcode') {
-        name += ' - ' + this.parameters.barcodeValue;
-    } else if (this.parameters.type === 'roboflow') {
-        name += ' - Roboflow Model';
-    } else {
-        console.assert(false, 'no .name() implemented for this marker controls');
-    }
-    return name;
-};
-
+ARjs.MarkerControls.prototype.name = function(){
+	var name = ''
+	name += this.parameters.type;
+	if( this.parameters.type === 'pattern' ){
+		var url = this.parameters.patternUrl
+		var basename = url.replace(/^.*\//g, '')
+		name += ' - ' + basename
+	}else if( this.parameters.type === 'barcode' ){
+		name += ' - ' + this.parameters.barcodeValue
+	}else{
+		console.assert(false, 'no .name() implemented for this marker controls')
+	}
+	return name
+}
 
 //////////////////////////////////////////////////////////////////////////////
 //		init for Artoolkit
@@ -201,9 +199,6 @@ ARjs.MarkerControls.prototype._initArtoolkit = function(){
 			arController.trackBarcodeMarkerId(artoolkitMarkerId, _this.parameters.size);
 		}else if( _this.parameters.type === 'unknown' ){
 			artoolkitMarkerId = null
-		// ROBOFLOW
-		}else if(this.parameters.type === 'roboflow'){
-			this._initRoboflow();  // New initialization function for Roboflow
 		}else{
 			console.log(false, 'invalid marker type', _this.parameters.type)
 		}
@@ -248,54 +243,3 @@ ARjs.MarkerControls.prototype._initTango = function(){
 	var _this = this
 	console.log('init tango ArMarkerControls')
 }
-
-//////////////////////////////////////////////////////////////////////////////
-//		init for Roboflow
-//////////////////////////////////////////////////////////////////////////////
-ARjs.MarkerControls.prototype._initRoboflow = function() {
-    const apiKey = this.parameters.roboflowApiKey;
-    const model = this.parameters.roboflowModel;
-
-    if (!apiKey || !model) {
-        console.error('Missing Roboflow API key or model.');
-        return;
-    }
-
-    // Attach Roboflow detection to the video feed in the context
-    this.context.onVideoFrame((frame) => {
-        detectMarker(frame);
-    });
-
-    // Example API request to detect markers
-    async function detectMarker(imageData) {
-        try {
-            const response = await fetch(`https://detect.roboflow.com/${model}?api_key=${apiKey}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ image: imageData }),
-            });
-
-            const result = await response.json();
-            _this.processRoboflowResults(result.predictions);
-        } catch (error) {
-            console.error('Roboflow detection error:', error);
-        }
-    }
-};
-
-//////////////////////////////////////////////////////////////////////////////
-//		process for Roboflow
-//////////////////////////////////////////////////////////////////////////////
-
-ARjs.MarkerControls.prototype.processRoboflowResults = function(predictions) {
-    predictions.forEach(prediction => {
-        if (prediction.confidence >= this.parameters.minConfidence) {
-            const modelViewMatrix = new THREE.Matrix4().fromArray(prediction.bbox);
-            this.updateWithModelViewMatrix(modelViewMatrix);
-        }
-    });
-};
-
-

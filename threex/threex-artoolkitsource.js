@@ -13,8 +13,7 @@ ARjs.Source = THREEx.ArToolkitSource = function(parameters){
 		sourceType : 'webcam',
 		// url of the source - valid if sourceType = image|video
 		sourceUrl : null,
-		roboflowModel: null,  // Roboflow model ID (used if sourceType is roboflow)
-		roboflowApiKey: null,  // Roboflow API key (used if sourceType is roboflow)
+		
 		// resolution of at which we initialize in the source image
 		sourceWidth: 640,
 		sourceHeight: 480,
@@ -60,9 +59,7 @@ ARjs.Source.prototype.init = function(onReady, onError){
                 var domElement = this._initSourceVideo(onSourceReady, onError)                        
         }else if( this.parameters.sourceType === 'webcam' ){
                 // var domElement = this._initSourceWebcamOld(onSourceReady)                        
-                var domElement = this._initSourceWebcam(onSourceReady, onError)
-		} else if (this.parameters.sourceType === 'roboflow') {
-			var domElement = this._initSourceRoboflow(onSourceReady, onError);  // New Roboflow source initialization                      
+                var domElement = this._initSourceWebcam(onSourceReady, onError)                        
         }else{
                 console.assert(false)
         }
@@ -82,78 +79,7 @@ ARjs.Source.prototype.init = function(onReady, onError){
 
 		onReady && onReady()
         }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-//          init roboflow source
-////////////////////////////////////////////////////////////////////////////////
-ARjs.Source.prototype._initSourceRoboflow = function(onReady, onError) {
-    var _this = this;
-
-    // Create a canvas element to serve as the source for Roboflow
-    var domElement = document.createElement('canvas');
-    domElement.width = this.parameters.sourceWidth;
-    domElement.height = this.parameters.sourceHeight;
-    domElement.style.width = this.parameters.displayWidth + 'px';
-    domElement.style.height = this.parameters.displayHeight + 'px';
-
-    // Initialize a video feed from the webcam to get real-time video frames
-    var videoElement = document.createElement('video');
-    videoElement.setAttribute('autoplay', '');
-    videoElement.setAttribute('muted', '');
-    videoElement.setAttribute('playsinline', '');
-    videoElement.style.width = this.parameters.displayWidth + 'px';
-    videoElement.style.height = this.parameters.displayHeight + 'px';
-
-    // Get user media (webcam)
-    navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
-        videoElement.srcObject = stream;
-        document.body.appendChild(videoElement);
-
-        // Draw frames from the webcam onto the canvas and send them to Roboflow
-        var context = domElement.getContext('2d');
-        function drawVideoToCanvas() {
-            context.drawImage(videoElement, 0, 0, domElement.width, domElement.height);
-            requestAnimationFrame(drawVideoToCanvas);
-        }
-        drawVideoToCanvas();
-
-        onReady && onReady();
-    }).catch(function(error) {
-        onError && onError(error);
-    });
-
-    return domElement;
-};
-
-ARjs.Source.prototype.update = function(onResults) {
-    if (this.parameters.sourceType === 'roboflow') {
-        this._sendFrameToRoboflow(onResults);
-    }
-};
-
-ARjs.Source.prototype._sendFrameToRoboflow = function(onResults) {
-    var _this = this;
-
-    // Get the frame from the canvas element
-    var frame = this.domElement.toDataURL('image/jpeg');
-
-    // Send the frame to the Roboflow API for processing
-    fetch(`https://detect.roboflow.com/${this.parameters.roboflowModel}?api_key=${this.parameters.roboflowApiKey}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ image: frame }),
-    })
-    .then(response => response.json())
-    .then(result => {
-        onResults && onResults(result);
-    })
-    .catch(error => {
-        console.error('Roboflow API error:', error);
-    });
-};
+} 
 
 ////////////////////////////////////////////////////////////////////////////////
 //          init image source
@@ -377,9 +303,6 @@ ARjs.Source.prototype.onResizeElement = function(){
 
 	// sanity check
 	console.assert( arguments.length === 0 )
-
-	console.log('domElement:', this.domElement);
-	console.assert(this.domElement !== undefined, 'domElement is undefined.');
 
 	// compute sourceWidth, sourceHeight
 	if( this.domElement.nodeName === "IMG" ){

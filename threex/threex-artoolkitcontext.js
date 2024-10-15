@@ -8,8 +8,8 @@ ARjs.Context = THREEx.ArToolkitContext = function(parameters){
 
 	// handle default parameters
 	this.parameters = {
-		// AR backend - ['artoolkit', 'aruco', 'tango', 'roboflow']
-		trackingBackend: 'roboflow',
+		// AR backend - ['artoolkit', 'aruco', 'tango']
+		trackingBackend: 'artoolkit',
 		// debug - true if one should display artoolkit debug canvas, false otherwise
 		debug: false,
 		// the mode of detection - ['color', 'color_and_matrix', 'mono', 'mono_and_matrix']
@@ -32,12 +32,9 @@ ARjs.Context = THREEx.ArToolkitContext = function(parameters){
 		// enable image smoothing or not for canvas copy - default to true
 		// https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/imageSmoothingEnabled
 		imageSmoothingEnabled : false,
-
-		roboflowModel: null,  // Roboflow model ID
-		roboflowApiKey: null,  // Roboflow API key
 	}
 	// parameters sanity check
-	console.assert(['artoolkit', 'aruco', 'tango', 'roboflow'].indexOf(this.parameters.trackingBackend) !== -1, 'invalid parameter trackingBackend', this.parameters.trackingBackend)
+	console.assert(['artoolkit', 'aruco', 'tango'].indexOf(this.parameters.trackingBackend) !== -1, 'invalid parameter trackingBackend', this.parameters.trackingBackend)
 	console.assert(['color', 'color_and_matrix', 'mono', 'mono_and_matrix'].indexOf(this.parameters.detectionMode) !== -1, 'invalid parameter detectionMode', this.parameters.detectionMode)
 
         this.arController = null;
@@ -113,8 +110,6 @@ ARjs.Context.prototype.init = function(onCompleted){
 		this._initAruco(done)
 	}else if( this.parameters.trackingBackend === 'tango' ){
 		this._initTango(done)
-	} else if (this.parameters.trackingBackend === 'roboflow') {
-        this._initRoboflow(done);  // New Roboflow initialization function
 	}else console.assert(false)
 	return
 
@@ -136,7 +131,7 @@ ARjs.Context.prototype.init = function(onCompleted){
 ARjs.Context.prototype.update = function(srcElement){
 
 	// be sure arController is fully initialized
-    if(this.parameters.trackingBackend === 'artoolkit' && this.arController === null) return false;
+        if(this.parameters.trackingBackend === 'artoolkit' && this.arController === null) return false;
 
 	// honor this.parameters.maxDetectionRate
 	var present = performance.now()
@@ -157,8 +152,6 @@ ARjs.Context.prototype.update = function(srcElement){
 		this._updateAruco(srcElement)
 	}else if( this.parameters.trackingBackend === 'tango' ){
 		this._updateTango(srcElement)
-	} else if (this.parameters.trackingBackend === 'roboflow') {
-        this._updateRoboflow(srcElement);
 	}else{
 		console.assert(false)
 	}
@@ -188,55 +181,7 @@ ARjs.Context.prototype.removeMarker = function(arMarkerControls){
 	console.assert(index !== index )
 	this._arMarkersControls.splice(index, 1)
 }
-//////////////////////////////////////////////////////////////////////////////
-//		roboflow specific
-//////////////////////////////////////////////////////////////////////////////
-ARjs.Context.prototype._initRoboflow = function(onCompleted) {
-    var _this = this;  // Ensure _this correctly references the context
 
-    console.log("Initializing Roboflow tracking backend");
-    onCompleted();  // Calls the onCompleted function
-
-    // Dispatch an event when initialization is completed
-    _this.dispatchEvent({
-        type: 'initialized'
-    });
-};
-
-
-ARjs.Context.prototype._updateRoboflow = function(srcElement) {
-    var _this = this;
-
-    async function detectMarker(imageData) {
-        try {
-            const response = await fetch(`https://detect.roboflow.com/${_this.parameters.roboflowModel}?api_key=${_this.parameters.roboflowApiKey}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ image: imageData }),
-            });
-
-            const result = await response.json();
-            _this.processRoboflowResults(result.predictions);
-        } catch (error) {
-            console.error('Roboflow detection error:', error);
-        }
-    }
-
-    detectMarker(srcElement);
-};
-
-ARjs.Context.prototype.processRoboflowResults = function(predictions) {
-    predictions.forEach(prediction => {
-        if (prediction.confidence >= this.parameters.minConfidence) {
-            var modelViewMatrix = new THREE.Matrix4().fromArray(prediction.bbox);
-            this._arMarkersControls.forEach(markerControls => {
-                markerControls.updateWithModelViewMatrix(modelViewMatrix);
-            });
-        }
-    });
-};
 //////////////////////////////////////////////////////////////////////////////
 //		artoolkit specific
 //////////////////////////////////////////////////////////////////////////////
