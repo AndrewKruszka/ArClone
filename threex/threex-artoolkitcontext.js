@@ -192,9 +192,17 @@ ARjs.Context.prototype.removeMarker = function(arMarkerControls){
 //		roboflow specific
 //////////////////////////////////////////////////////////////////////////////
 ARjs.Context.prototype._initRoboflow = function(onCompleted) {
+    var _this = this;  // Ensure _this correctly references the context
+
     console.log("Initializing Roboflow tracking backend");
-    onCompleted();
+    onCompleted();  // Calls the onCompleted function
+
+    // Dispatch an event when initialization is completed
+    _this.dispatchEvent({
+        type: 'initialized'
+    });
 };
+
 
 ARjs.Context.prototype._updateRoboflow = function(srcElement) {
     var _this = this;

@@ -80,8 +80,9 @@ ARjs.MarkerControls = THREEx.ArMarkerControls = function(context, object3d, para
 	}else console.assert(false)
 }
 
-ARjs.MarkerControls.prototype = Object.create( THREEx.ArBaseControls.prototype );
-ARjs.MarkerControls.prototype.constructor = THREEx.ArMarkerControls;
+ARjs.MarkerControls.prototype = Object.create(THREEx.ArBaseControls.prototype);
+ARjs.MarkerControls.prototype.constructor = ARjs.MarkerControls;
+
 
 ARjs.MarkerControls.prototype.dispose = function(){
 	this.context.removeMarker(this)
