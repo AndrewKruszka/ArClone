@@ -378,6 +378,9 @@ ARjs.Source.prototype.onResizeElement = function(){
 	// sanity check
 	console.assert( arguments.length === 0 )
 
+	console.log('domElement:', this.domElement);
+	console.assert(this.domElement !== undefined, 'domElement is undefined.');
+
 	// compute sourceWidth, sourceHeight
 	if( this.domElement.nodeName === "IMG" ){
 		var sourceWidth = this.domElement.naturalWidth
