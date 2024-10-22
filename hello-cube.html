@@ -36,14 +36,18 @@ animate();
 
 function initialize()
 {
+	// Create a new Three,js scene
 	scene = new THREE.Scene();
 
+	// Add ambient light to the scene
 	let ambientLight = new THREE.AmbientLight( 0xcccccc, 0.5 );
 	scene.add( ambientLight );
 				
+	// Add camera to the scene
 	camera = new THREE.Camera();
 	scene.add(camera);
 
+	// Create a new Three.js renderer and add it to the page
 	renderer = new THREE.WebGLRenderer({
 		antialias : true,
 		alpha: true
@@ -55,6 +59,7 @@ function initialize()
 	renderer.domElement.style.left = '0px'
 	document.body.appendChild( renderer.domElement );
 
+	// Create a clock for timing
 	clock = new THREE.Clock();
 	deltaTime = 0;
 	totalTime = 0;
@@ -63,10 +68,12 @@ function initialize()
 	// setup arToolkitSource
 	////////////////////////////////////////////////////////////
 
+	// Use webcam as source of arToolkit
 	arToolkitSource = new THREEx.ArToolkitSource({
 		sourceType : 'webcam',
 	});
 
+	// Handle resize events. An event listener is added to the window and the onResize function is called when the event is triggered
 	function onResize()
 	{
 		arToolkitSource.onResize()	
@@ -77,6 +84,7 @@ function initialize()
 		}	
 	}
 
+	
 	arToolkitSource.init(function onReady(){
 		onResize()
 	});
@@ -109,7 +117,7 @@ function initialize()
 	markerRoot1 = new THREE.Group();
 	scene.add(markerRoot1);
 	let markerControls1 = new THREEx.ArMarkerControls(arToolkitContext, markerRoot1, {
-		type: 'pattern', patternUrl: "data/hiro.patt",
+		type: 'pattern', patternUrl: "data/custom.patt",
 	})
 
 	let geometry1	= new THREE.CubeGeometry(1,1,1);
